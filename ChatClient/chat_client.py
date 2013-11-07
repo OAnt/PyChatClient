@@ -1,18 +1,18 @@
 import gevent
 import gevent.socket
-import sys
 from gevent import select
 
 class ChatClient(object):
 
-    def __init__(self, host, port, pipe_out):
+    def __init__(self, host, port, pipe_in, pipe_out):
         try:
             self.Socket = gevent.socket.create_connection((host, port))
         except IOError:
             print "Server not ready:", host, port
             exit(2)
         self.pipe_out = pipe_out
-        self.dispatcher = {sys.stdin: self.write_connection, self.Socket: self.listen_connection}
+        self.pipe_in = pipe_in
+        self.dispatcher = {self.pipe_in: self.write_connection, self.Socket: self.listen_connection}
         gevent.joinall([gevent.spawn(self.scheduler)])
 
     def listen_connection(self, zzz):
@@ -35,5 +35,3 @@ class ChatClient(object):
             for input in to_read:
                 self.dispatcher[input](input)
 
-
-ChatClient("localhost", 4000, sys.stdout)
