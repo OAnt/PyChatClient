@@ -1,0 +1,30 @@
+import gevent
+import gevent.socket
+import sys
+from gevent import select
+
+Socket = gevent.socket.create_connection(("localhost", 4000))
+
+
+def listen_connection():
+    while True:
+        gevent.socket.wait_read(Socket.fileno())
+        sys.stdout.write(Socket.recv(1024))
+        sys.stdout.flush()
+        gevent.sleep()
+
+
+def write_connection():
+    while True:
+        #message = raw_input(">")
+        #transmit = "".join([message,'\n'])
+        select.select([],[],[],0)
+        transmit = sys.stdin.next()
+        Socket.sendall(transmit)
+        gevent.sleep()
+
+
+gevent.joinall([
+    gevent.spawn(write_connection),
+    gevent.spawn(listen_connection)
+    ])
