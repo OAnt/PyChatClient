@@ -3,27 +3,37 @@ import gevent.socket
 import sys
 from gevent import select
 
-Socket = gevent.socket.create_connection(("localhost", 4000))
+class ChatClient(object):
+
+    def __init__(self, host, port, pipe_out):
+        try:
+            self.Socket = gevent.socket.create_connection((host, port))
+        except IOError:
+            print "Server not ready:", host, port
+            exit(2)
+        self.pipe_out = pipe_out
+        self.dispatcher = {sys.stdin: self.write_connection, self.Socket: self.listen_connection}
+        gevent.joinall([gevent.spawn(self.scheduler)])
+
+    def listen_connection(self, zzz):
+        try:
+            self.pipe_out.write(self.Socket.recv(1024))
+            self.pipe_out.flush()
+        except IOError as e:
+            raise gevent.GreenletExit
+
+    def write_connection(self, a_pipe):
+        line = a_pipe.readline()
+        try:
+            self.Socket.sendall(line)
+        except IOError:
+            raise gevent.GreenletExit
+
+    def scheduler(self):
+        while True:
+            to_read, to_write, to_err = select.select(self.dispatcher.keys(),[],[],1)
+            for input in to_read:
+                self.dispatcher[input](input)
 
 
-def listen_connection(Socket):
-    sys.stdout.write(Socket.recv(1024))
-    sys.stdout.flush()
-
-
-def write_connection(a_pipe):
-    line = a_pipe.readline()
-    Socket.sendall(line)
-
-
-def scheduler():
-    dispatcher = {sys.stdin: write_connection, Socket: listen_connection}
-    while True:
-        to_read, to_write, to_err = select.select([Socket, sys.stdin],[],[],1)
-        for input in to_read:
-            dispatcher[input](input)
-
-
-gevent.joinall([
-    gevent.spawn(scheduler)
-    ])
+ChatClient("localhost", 4000, sys.stdout)
