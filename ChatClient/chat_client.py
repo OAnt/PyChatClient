@@ -21,13 +21,15 @@ class ChatClient(object):
             self.pipe_out.write(self.socket.recv(1024))
             self.pipe_out.flush()
         except IOError as e:
+            print e
             raise gevent.GreenletExit
 
     def write_connection(self, a_pipe):
         line = a_pipe.readline()
         try:
             self.socket.sendall(line)
-        except IOError:
+        except IOError as e:
+            print e
             raise gevent.GreenletExit
 
     def scheduler(self):
